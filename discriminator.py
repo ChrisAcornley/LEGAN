@@ -1,9 +1,9 @@
 
 class LinearDiscriminator():
     def __init__(self):
-        print("Generator")
+        print("Linear")
 
         
 class EmbeddingDiscriminator():
     def __init__(self):
-        print("Generator")
+        print("Embedding")
