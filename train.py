@@ -23,8 +23,11 @@ parser.add_argument("--gen_embedding_dim", default=256, type=int, help="Dimensio
 parser.add_argument("--gen_rnn_units", default=1024, type=int, help="Number of RNN units in generator")
 
 # Pretraining
-parser.add_argument("--pretrain_gen_epochs", default=50, type=int, help="Number of pretrain epochs for Generator")
+parser.add_argument("--pretrain_gen_epochs", default=100, type=int, help="Number of pretrain epochs for Generator")
 parser.add_argument("--pretrain_ckpt_max_count", default=1, type=int, help="Maximum number of checkpoints to keep")
+
+# Post-Training
+parser.add_argument("--posttrain_gen_epochs", default=100, type=int, help="Number of posttrain epochs for Generator")
 
 # Checkpoint
 parser.add_argument("--ckpt_path", default="./ckpt", type=str, help="Checkpoint Path for saved models")
@@ -165,7 +168,7 @@ def adversarial_training(config, data_loader, discriminator, generator, name):
     disc_optimiser = tf.optimizers.Adam()
 
     # Adversarial Training
-    for epoch in range(config.pretrain_gen_epochs):
+    for epoch in range(config.posttrain_gen_epochs):
         starttime = time.perf_counter()
         print("Starting Epoch {}...".format(epoch + 1))
         gen_loss_avg = []
@@ -186,6 +189,7 @@ def adversarial_training(config, data_loader, discriminator, generator, name):
             gen_optimiser.apply_gradients(zip(gen_gradients, generator.trainable_variables))   
             disc_optimiser.apply_gradients(zip(disc_gradients, discriminator.trainable_variables))    
         endtime = time.perf_counter()
+        print("Loss for Generator epoch {}: {:.3f}".format(epoch+1, sum(gen_loss_avg) / len(gen_loss_avg)))
         print("Loss for Discriminator epoch {}: {:.3f}".format(epoch+1, sum(disc_loss_avg) / len(disc_loss_avg)))
         print('Epoch {} took {:.2f}s'.format(epoch+1, float(endtime - starttime)))
         if (epoch+1) % config.ckpt_frq == 0:

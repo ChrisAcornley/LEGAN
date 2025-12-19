@@ -16,16 +16,11 @@ class IMDBLoader():
 
         train, test = dataset['train'], dataset['test']
 
-
-
         self.train_dataset = train.shuffle(self.config.buffer_size).batch(self.config.batch_size).prefetch(tf.data.AUTOTUNE)
         self.test_dataset = test.batch(self.config.batch_size).prefetch(tf.data.AUTOTUNE)
 
-        
-
         self.encoder = tf.keras.layers.TextVectorization(max_tokens=self.config.vocab_size, ragged=True)
         self.encoder.adapt(self.train_dataset.map(lambda text, label: text))
-
         
         # for data in train.take(1):
         #     print(data)
@@ -34,7 +29,6 @@ class IMDBLoader():
         # Setup if data does not require non-ragged tensor
         self.masked_encoder = tf.keras.layers.TextVectorization(max_tokens=self.config.vocab_size)
         self.masked_encoder.adapt(self.train_dataset.map(lambda text, label: text))
-        
 
         end_time = time.perf_counter()
 
@@ -42,3 +36,14 @@ class IMDBLoader():
             print("Time taken to load IMDB Dataset: {}".format(end_time - start_time))
 
         return self
+    
+class ToyConfig():
+        def __init__(self):
+            self.buffer_size = 10000
+            self.batch_size = 64
+            self.vocab_size = 1000
+            self.print_loading_time = True
+
+if __name__ == "__main__":
+    loader = IMDBLoader(ToyConfig())
+    loader.load()

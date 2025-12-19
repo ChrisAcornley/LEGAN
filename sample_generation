@@ -1,0 +1,88 @@
+import tensorflow as tf
+import os
+import numpy as np
+from generator import Generator, GeneratorSimplified
+from datasetloader import IMDBLoader, ToyConfig
+
+vocab_size = 1000
+rnn_units = 1024
+embedding_dim = 256
+
+def generate_samples(generator, encoder, prompt=None, response_length = 99, temperature=1.0, ):
+    input = encoder(prompt)
+    vocab = encoder.get_vocabulary()
+    input = tf.expand_dims(input, axis = 0)
+    noise = tf.random.normal([1, 1, 16], 0.5, 0.5)
+    states = None
+
+    for _ in range(response_length):
+        # run model for next prediction
+        pred_logits, states = generator({"dataset_inputs": input, "random_noise": noise}, 
+                                 return_state = True,
+                                 states = states)
+        
+        pred_logits = pred_logits[:, -1, :]
+        pred_logits = pred_logits/temperature
+
+        predicted_ids = tf.random.categorical(pred_logits, num_samples=1)
+        #predicted_ids = tf.squeeze(predicted_ids, axis=-1)
+        input = tf.concat([input, predicted_ids], 1)
+
+        next_noise = tf.random.normal([1, 1, 16], 0.5, 0.5)
+        noise = tf.concat([noise, next_noise], 1)
+
+    result = tf.squeeze(input).numpy()
+    output = " ".join([vocab[each] for each in result])
+
+    return output
+
+if __name__ == "__main__":
+    gen_names = ["Linear_gen_pretrain", "Linearadversarial_training", "LinearSimple_gen_pretrain", "LinearSimpleadversarial_training",
+                 "EmbeddingLinear_gen_pretrain", "EmbeddingLinearadversarial_training", "EmbeddingLinearSimple_gen_pretrain", "EmbeddingLinearSimpleadversarial_training"]
+
+    samples = []
+
+    loader = IMDBLoader(ToyConfig())
+    loader = loader.load()
+
+    list_of_failed_models = []
+
+    for gen_name in gen_names:
+        try:
+            ckpt_source = "./ckpt"
+            ckpt_path = os.path.join(ckpt_source, gen_name)
+
+            generator = None
+            if("Simple" in gen_names):
+                generator = GeneratorSimplified(vocab_size=vocab_size, embedding_dim=embedding_dim, rnn_units=rnn_units)
+            else:
+                generator = Generator(vocab_size=vocab_size, embedding_dim=embedding_dim, rnn_units=rnn_units)
+            ckpt = tf.train.Checkpoint(generator)
+            manager = tf.train.CheckpointManager(ckpt, ckpt_path, 1)
+
+            ckpt.restore(manager.latest_checkpoint)
+            if manager.latest_checkpoint:
+                print("Restored from {}".format(manager.latest_checkpoint))
+            else:
+                print("Failed to load model.")
+                exit(-1)
+
+            sample = generate_samples(generator, loader.masked_encoder, prompt="I")
+            samples.append(sample)
+        except Exception as e:
+            print("cannot create sample from: " + gen_name)
+            print(e)
+            list_of_failed_models.append(gen_name)
+
+    print("Following models could not be sampled...")
+    for model in list_of_failed_models:
+        print(model)
+    print("\n\n\n")
+
+
+    
+
+    with open("samples.txt", "w") as file:
+        for sample in samples:
+            print(sample)
+            file.write(sample + "\n")
