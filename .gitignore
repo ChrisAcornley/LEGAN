@@ -208,3 +208,4 @@ __marimo__/
 
 # Don't save checkpoint folder
 ckpt/
+ckpt*/
