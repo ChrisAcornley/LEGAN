@@ -8,7 +8,7 @@ vocab_size = 1000
 rnn_units = 1024
 embedding_dim = 256
 
-def generate_samples(generator, encoder, prompt=None, response_length = 99, temperature=1.0, ):
+def generate_samples(generator, encoder, prompt=None, response_length = 99, temperature=1.0):
     input = encoder(prompt)
     vocab = encoder.get_vocabulary()
     input = tf.expand_dims(input, axis = 0)
